@@ -1,167 +1,127 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const candles = Array.from({ length: 54 }, (_, i) => {
-  const drift = i < 12 ? i * 1.25 : i < 25 ? 15 - (i - 12) * 0.8 : i < 38 ? 5 + (i - 25) * 1.05 : 18 - (i - 38) * 0.42;
-  const wave = Math.sin(i * 0.82) * 3.1;
-  const open = 5642 + drift + wave;
-  const close = open + Math.sin(i * 1.71) * 3.9;
-  return { open, close, high: Math.max(open, close) + 2.2 + (i % 3), low: Math.min(open, close) - 2 - ((i + 1) % 3) };
+type Bar = { time: number; open: number; high: number; low: number; close: number; volume: number };
+type Drawing = { type: "trend" | "horizontal" | "rect"; x1: number; y1: number; x2: number; y2: number };
+type Tool = "cursor" | "trend" | "horizontal" | "rect" | "erase";
+
+const MINUTE = 60_000;
+const openTime = new Date("2024-07-15T09:30:00-04:00").getTime();
+
+const minuteBars: Bar[] = Array.from({ length: 390 }, (_, i) => {
+  const base = 5638 + i * 0.052 + Math.sin(i / 17) * 6.2 + Math.sin(i / 5.8) * 1.75 - Math.max(0, i - 210) * 0.025;
+  const open = base + Math.sin(i * 1.23) * 0.72;
+  const close = base + Math.sin(i * 1.91 + 1) * 0.95;
+  const wick = 0.65 + (i % 7) * 0.12;
+  return { time: openTime + i * MINUTE, open, close, high: Math.max(open, close) + wick, low: Math.min(open, close) - wick * .86, volume: 720 + Math.round(Math.abs(Math.sin(i / 9)) * 1400 + (i < 35 ? 1700 - i * 25 : 0)) };
 });
 
-const chain = [
-  { strike: 5620, delta: ".78", bid: "31.10", ask: "32.20", iv: "18.4%", put: "4.10" },
-  { strike: 5630, delta: ".66", bid: "22.60", ask: "23.40", iv: "17.9%", put: "6.70" },
-  { strike: 5640, delta: ".53", bid: "15.40", ask: "16.10", iv: "17.2%", put: "10.20" },
-  { strike: 5650, delta: ".39", bid: "9.60", ask: "10.20", iv: "16.8%", put: "15.10" },
-  { strike: 5660, delta: ".27", bid: "5.40", ask: "5.90", iv: "17.3%", put: "21.60" },
+function aggregateBars(source: Bar[], frame: number) {
+  const result: Bar[] = [];
+  for (let i = 0; i < source.length; i += frame) {
+    const group = source.slice(i, i + frame);
+    if (!group.length) break;
+    result.push({ time: group[0].time, open: group[0].open, close: group[group.length - 1].close, high: Math.max(...group.map(b => b.high)), low: Math.min(...group.map(b => b.low)), volume: group.reduce((n, b) => n + b.volume, 0) });
+  }
+  return result;
+}
+
+const lessons = [
+  { id: 1, unit: "01", title: "期权语言", subtitle: "权利、义务与合约乘数", status: "完成", duration: "18 分钟", intro: "先把一张期权合约拆开，理解你究竟买了什么。", sections: [{ h: "期权不是股票", p: "买入股票得到资产本身；买入期权得到的是在到期日前按约定价格交易标的资产的权利。买方支付权利金，卖方收取权利金并承担履约义务。" }, { h: "一张合约代表什么", p: "美股标准股票期权通常对应 100 股。报价 $2.40 意味着一张合约成本通常是 $240，而不是 $2.40。SPX 属于现金结算指数期权，结算方式不同。" }, { h: "先看最坏结果", p: "买方最大亏损通常是已付权利金；裸卖方风险可能非常大。每次讨论收益前，先写出最大亏损、盈亏平衡点和到期时间。" }], question: "某 Call 报价 $3.20，标准乘数为 100。买入 1 张至少需要多少权利金？", choices: ["$3.20", "$32", "$320", "$3,200"], answer: 2 },
+  { id: 2, unit: "02", title: "价格怎么动", subtitle: "内在价值、时间价值与波动率", status: "完成", duration: "24 分钟", intro: "方向看对仍可能亏损，因为期权价格不只由方向决定。", sections: [{ h: "期权价格的两层", p: "权利金可拆成内在价值和时间价值。价内程度决定内在价值，剩余时间、隐含波动率和利率共同影响时间价值。" }, { h: "Theta：时间不是免费的", p: "其他条件不变时，期权会随到期临近损失时间价值。0DTE 的衰减尤其快，临近收盘时更明显。" }, { h: "Vega：市场在给波动定价", p: "隐含波动率上升通常抬高买方权利金，回落则压低权利金。因此财报前后或重大事件日，不能只判断方向。" }], question: "标的上涨，但你买的 Call 仍亏损，最合理的可能原因是？", choices: ["股票上涨一定赚钱", "隐波回落与时间衰减超过 Delta 收益", "合约乘数变小", "行权价自动变化"], answer: 1 },
+  { id: 3, unit: "03", title: "单腿策略", subtitle: "Long Call / Put 与风险边界", status: "进行中", duration: "22 分钟", intro: "用最简单的结构学会表达方向，同时尊重时间和波动率。", sections: [{ h: "什么时候买 Call", p: "你不仅需要看涨，还需要预期上涨发生得足够快、幅度足够大。若隐波很高，方向判断正确也可能被波动率回落抵消。" }, { h: "Delta 不是胜率", p: "Delta 描述标的价格小幅变化时期权价格的敏感度，也常被粗略当作到期价内概率参考，但它不是保证，更不是策略胜率。" }, { h: "入场前的三句话", p: "写清方向证据、判断失效的位置和离场条件。若无法回答其中任何一项，就还没有形成可执行交易。" }], question: "0DTE 买入 Call 前，哪个问题最重要？", choices: ["它昨天涨了多少", "最大收益是否无限", "观点何时失效、最多亏多少", "社区里多少人看多"], answer: 2 },
+  { id: 4, unit: "04", title: "垂直价差", subtitle: "方向、成本与收益上限", status: "待解锁", duration: "28 分钟", intro: "用一买一卖降低成本，让风险和目标都变得清楚。", sections: [{ h: "结构", p: "看涨借记价差通常买入较低行权价 Call，同时卖出相同到期日的较高行权价 Call。净支出降低，但最大收益也被封顶。" }, { h: "为什么适合高隐波", p: "卖出的期权能部分抵消买入期权较高的波动率成本，也能减轻部分 Theta 压力。" }, { h: "最大风险", p: "最大亏损通常是净权利金；最大收益通常是行权价差减去净权利金，再乘合约乘数。" }], question: "5 点宽价差净支出 $1.80，单张最大理论收益是多少？", choices: ["$180", "$320", "$500", "无限"], answer: 1 },
+  { id: 5, unit: "05", title: "蝶式与鹰式", subtitle: "用结构表达区间观点", status: "待解锁", duration: "31 分钟", intro: "当你的观点不是单纯涨跌，而是价格可能落在某个区域。", sections: [{ h: "蝶式的核心", p: "蝶式由三个行权价构成，中间行权价通常卖出两张。它以有限风险换取价格到期靠近中间行权价时的收益。" }, { h: "铁鹰式", p: "铁鹰式由看跌信用价差与看涨信用价差组成，适合预期价格维持区间、隐波可能下降的情景。" }, { h: "0DTE 的针尖风险", p: "临近到期 Gamma 很高，价格轻微移动就可能大幅改变盈亏。区间策略并不等于低风险。" }], question: "哪种观点更适合考虑铁鹰式？", choices: ["预期单边暴涨", "预期单边暴跌", "预期维持区间且隐波偏高", "完全不知道方向"], answer: 2 },
+  { id: 6, unit: "06", title: "0DTE 实战", subtitle: "时间衰减、流动性与纪律", status: "待解锁", duration: "35 分钟", intro: "把图表结构、期权链和仓位风险放进同一个决策流程。", sections: [{ h: "先判断环境", p: "开盘区间、VWAP、前日高低点和更高周期结构，比单根 K 线更重要。先分辨趋势日、区间日还是事件驱动日。" }, { h: "流动性就是成本", p: "价差过宽会让入场和离场都付出额外成本。比较 Bid、Ask、成交量与持仓量，不要只看理论中间价。" }, { h: "训练的目标", p: "目标不是每天交易，而是稳定执行流程。没有优势时不交易，也是一种正确决策。" }], question: "当期权买卖价差很宽时，最合理的做法是？", choices: ["直接市价追单", "增加仓位摊薄成本", "使用限价并评估是否放弃交易", "忽略流动性"], answer: 2 },
 ];
 
-const modules = [
-  ["01", "期权语言", "权利、义务与合约乘数", "完成"],
-  ["02", "价格怎么动", "内在价值、时间价值与波动率", "完成"],
-  ["03", "单腿策略", "Long Call / Put 与风险边界", "进行中"],
-  ["04", "垂直价差", "方向、成本与收益上限", "待解锁"],
-  ["05", "蝶式与鹰式", "用结构表达区间观点", "待解锁"],
-  ["06", "0DTE 实战", "时间衰减、流动性与纪律", "待解锁"],
+const chain = [
+  { strike: 5620, delta: ".78", bid: "31.10", ask: "32.20", iv: "18.4%", put: "4.10" }, { strike: 5630, delta: ".66", bid: "22.60", ask: "23.40", iv: "17.9%", put: "6.70" }, { strike: 5640, delta: ".53", bid: "15.40", ask: "16.10", iv: "17.2%", put: "10.20" }, { strike: 5650, delta: ".39", bid: "9.60", ask: "10.20", iv: "16.8%", put: "15.10" }, { strike: 5660, delta: ".27", bid: "5.40", ask: "5.90", iv: "17.3%", put: "21.60" },
 ];
+
+function formatTime(ms: number) { return new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/New_York" }).format(ms); }
+
+function TradingChart({ frame, setFrame, replayMinute, tool, setTool }: { frame: number; setFrame: (n: number) => void; replayMinute: number; tool: Tool; setTool: (t: Tool) => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [drawings, setDrawings] = useState<Drawing[]>([]);
+  const [draft, setDraft] = useState<Drawing | null>(null);
+  const [cross, setCross] = useState<{ x: number; y: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [showMA, setShowMA] = useState(true);
+  const [showVWAP, setShowVWAP] = useState(true);
+  const bars = useMemo(() => aggregateBars(minuteBars.slice(0, replayMinute + 1), frame), [frame, replayMinute]);
+  const visibleCount = Math.max(24, Math.round((frame === 1 ? 95 : frame === 5 ? 72 : 48) / zoom));
+  const visible = bars.slice(-visibleCount);
+
+  const render = useCallback(() => {
+    const canvas = canvasRef.current, wrap = wrapRef.current;
+    if (!canvas || !wrap || !visible.length) return;
+    const dpr = window.devicePixelRatio || 1, rect = wrap.getBoundingClientRect();
+    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr; canvas.style.width = `${rect.width}px`; canvas.style.height = `${rect.height}px`;
+    const ctx = canvas.getContext("2d")!; ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height, left = 56, right = 66, top = 27, volumeH = 62, bottom = 26, chartBottom = H - bottom - volumeH, plotW = W - left - right;
+    const hi = Math.max(...visible.map(b => b.high)), lo = Math.min(...visible.map(b => b.low)), pad = Math.max(2, (hi - lo) * .1), maxP = hi + pad, minP = lo - pad;
+    const xAt = (i: number) => left + (i + .5) * (plotW / visible.length), yAt = (p: number) => top + (maxP - p) / (maxP - minP) * (chartBottom - top);
+    ctx.fillStyle = "#fbfcfa"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "#e7ebe7"; ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) { const y = top + (chartBottom - top) * i / 5; ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(W - right, y); ctx.stroke(); const p = maxP - (maxP - minP) * i / 5; ctx.fillStyle = "#75807b"; ctx.font = "10px ui-monospace"; ctx.fillText(p.toFixed(1), W - right + 8, y + 3); }
+    for (let i = 0; i <= 6; i++) { const x = left + plotW * i / 6; ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, H - bottom); ctx.stroke(); }
+    if (showVWAP) { let cumPV = 0, cumV = 0; ctx.strokeStyle = "#c38b2d"; ctx.lineWidth = 1.3; ctx.beginPath(); visible.forEach((b, i) => { cumPV += ((b.high + b.low + b.close) / 3) * b.volume; cumV += b.volume; const x = xAt(i), y = yAt(cumPV / cumV); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke(); }
+    if (showMA && visible.length > 5) { ctx.strokeStyle = "#4b6fd8"; ctx.lineWidth = 1.3; ctx.beginPath(); visible.forEach((b, i) => { if (i < 4) return; const ma = visible.slice(i - 4, i + 1).reduce((n, z) => n + z.close, 0) / 5, x = xAt(i), y = yAt(ma); i === 4 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }); ctx.stroke(); }
+    const slot = plotW / visible.length, bodyW = Math.max(3, Math.min(11, slot * .64));
+    visible.forEach((b, i) => { const x = xAt(i), up = b.close >= b.open, color = up ? "#1d9a73" : "#d75d58"; ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + .5, yAt(b.high)); ctx.lineTo(x + .5, yAt(b.low)); ctx.stroke(); const y1 = yAt(b.open), y2 = yAt(b.close), bodyY = Math.min(y1, y2), bodyH = Math.max(1.5, Math.abs(y1 - y2)); ctx.fillRect(x - bodyW / 2, bodyY, bodyW, bodyH); });
+    const maxV = Math.max(...visible.map(b => b.volume)); visible.forEach((b, i) => { const vh = b.volume / maxV * (volumeH - 13); ctx.fillStyle = b.close >= b.open ? "#1d9a7355" : "#d75d5855"; ctx.fillRect(xAt(i) - bodyW / 2, H - bottom - vh, bodyW, vh); });
+    ctx.fillStyle = "#75807b"; ctx.font = "10px ui-monospace"; [0, .25, .5, .75, 1].forEach(n => { const idx = Math.min(visible.length - 1, Math.floor((visible.length - 1) * n)); ctx.fillText(formatTime(visible[idx].time), xAt(idx) - 14, H - 8); });
+    const last = visible[visible.length - 1]; ctx.fillStyle = last.close >= last.open ? "#147d5d" : "#bb4e4a"; const lastY = yAt(last.close); ctx.fillRect(W - right, lastY - 9, right, 18); ctx.fillStyle = "white"; ctx.font = "10px ui-monospace"; ctx.fillText(last.close.toFixed(2), W - right + 7, lastY + 3);
+    const allDrawings = draft ? [...drawings, draft] : drawings; ctx.lineWidth = 1.8; ctx.strokeStyle = "#c18425"; ctx.setLineDash([]); allDrawings.forEach(d => { ctx.beginPath(); if (d.type === "trend") { ctx.moveTo(d.x1, d.y1); ctx.lineTo(d.x2, d.y2); } else if (d.type === "horizontal") { ctx.moveTo(left, d.y1); ctx.lineTo(W - right, d.y1); } else ctx.rect(Math.min(d.x1, d.x2), Math.min(d.y1, d.y2), Math.abs(d.x2 - d.x1), Math.abs(d.y2 - d.y1)); ctx.stroke(); });
+    if (cross && tool === "cursor") { ctx.strokeStyle = "#5d696488"; ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(left, cross.y); ctx.lineTo(W - right, cross.y); ctx.moveTo(cross.x, top); ctx.lineTo(cross.x, H - bottom); ctx.stroke(); ctx.setLineDash([]); const index = Math.max(0, Math.min(visible.length - 1, Math.floor((cross.x - left) / slot))); const b = visible[index]; if (b) { ctx.fillStyle = "#18201eee"; ctx.fillRect(Math.max(left, Math.min(cross.x + 9, W - 220)), 8, 202, 19); ctx.fillStyle = "white"; ctx.font = "10px ui-monospace"; ctx.fillText(`O ${b.open.toFixed(1)}  H ${b.high.toFixed(1)}  L ${b.low.toFixed(1)}  C ${b.close.toFixed(1)}`, Math.max(left + 6, Math.min(cross.x + 15, W - 214)), 21); } }
+  }, [visible, drawings, draft, cross, tool, zoom, showMA, showVWAP]);
+
+  useEffect(() => { render(); const observer = new ResizeObserver(render); if (wrapRef.current) observer.observe(wrapRef.current); return () => observer.disconnect(); }, [render]);
+  const point = (e: React.PointerEvent<HTMLCanvasElement>) => { const r = e.currentTarget.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  const onDown = (e: React.PointerEvent<HTMLCanvasElement>) => { const p = point(e); if (tool === "erase") { setDrawings(ds => ds.slice(0, -1)); return; } if (tool !== "cursor") { e.currentTarget.setPointerCapture(e.pointerId); setDraft({ type: tool, x1: p.x, y1: p.y, x2: p.x, y2: p.y } as Drawing); } };
+  const onMove = (e: React.PointerEvent<HTMLCanvasElement>) => { const p = point(e); setCross(p); if (draft) setDraft({ ...draft, x2: p.x, y2: p.y }); };
+  const onUp = () => { if (draft) { setDrawings(ds => [...ds, draft]); setDraft(null); setTool("cursor"); } };
+  const last = visible[visible.length - 1];
+  return <div className="pro-chart-shell">
+    <div className="chart-commandbar">
+      <div className="symbol-block"><b>SPX</b><span>S&P 500 INDEX · CBOE</span></div><div className="ohlc"><b>{last?.close.toFixed(2)}</b><span>O {last?.open.toFixed(2)}</span><span>H {last?.high.toFixed(2)}</span><span>L {last?.low.toFixed(2)}</span><span className={last?.close >= last?.open ? "positive" : "negative"}>C {last?.close.toFixed(2)}</span></div>
+      <div className="frame-switch" aria-label="K线周期">{[1, 5, 15].map(n => <button key={n} className={frame === n ? "selected" : ""} onClick={() => setFrame(n)}>{n}m</button>)}</div>
+      <button className={showMA ? "indicator-on" : ""} onClick={() => setShowMA(v => !v)}>MA</button><button className={showVWAP ? "indicator-on" : ""} onClick={() => setShowVWAP(v => !v)}>VWAP</button><span className="sample-badge">历史样本</span>
+    </div>
+    <div className="chart-stage"><div className="draw-toolbar" aria-label="画线工具"><button title="十字光标" className={tool === "cursor" ? "active" : ""} onClick={() => setTool("cursor")}>⌖</button><button title="趋势线" className={tool === "trend" ? "active" : ""} onClick={() => setTool("trend")}>╱</button><button title="水平线" className={tool === "horizontal" ? "active" : ""} onClick={() => setTool("horizontal")}>—</button><button title="矩形" className={tool === "rect" ? "active" : ""} onClick={() => setTool("rect")}>□</button><button title="撤销上一条" onClick={() => setDrawings(ds => ds.slice(0, -1))}>↶</button><button title="清除全部" onClick={() => setDrawings([])}>⌫</button></div><div className="canvas-wrap" ref={wrapRef}><canvas ref={canvasRef} onPointerDown={onDown} onPointerMove={onMove} onPointerLeave={() => setCross(null)} onPointerUp={onUp} /><div className="chart-key"><span className="ma-key">MA5</span><span className="vwap-key">VWAP</span></div><div className="zoom-controls"><button onClick={() => setZoom(z => Math.min(2.3, z + .25))}>＋</button><button onClick={() => setZoom(z => Math.max(.65, z - .25))}>－</button></div></div></div>
+  </div>;
+}
 
 export default function Home() {
   const [view, setView] = useState<"sim" | "learn" | "quiz">("sim");
-  const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(4);
-  const [cursor, setCursor] = useState(31);
-  const [selected, setSelected] = useState(5640);
-  const [cash, setCash] = useState(25000);
-  const [position, setPosition] = useState(0);
-  const [review, setReview] = useState(false);
-  const [quizAnswer, setQuizAnswer] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!playing) return;
-    const timer = window.setInterval(() => setCursor((v) => (v >= candles.length ? 1 : v + 1)), 850 / speed);
-    return () => window.clearInterval(timer);
-  }, [playing, speed]);
-
-  const price = candles[Math.max(0, cursor - 1)].close;
-  const chart = useMemo(() => candles.slice(0, cursor), [cursor]);
-  const selectedRow = chain.find((row) => row.strike === selected)!;
-  const timeMinutes = Math.min(389, Math.round((cursor / candles.length) * 390));
-  const hour = 9 + Math.floor((30 + timeMinutes) / 60);
-  const minute = (30 + timeMinutes) % 60;
-  const simTime = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-
-  const buy = () => {
-    const cost = Number(selectedRow.ask) * 100;
-    if (cash >= cost) { setCash((v) => v - cost); setPosition((v) => v + 1); }
-  };
-
-  return (
-    <main className="app-shell">
-      <aside className="sidebar">
-        <div className="brand"><span className="brand-mark">Δ</span><span>期权研习社<small>OPTIONS LAB</small></span></div>
-        <nav aria-label="主导航">
-          <button className={view === "sim" ? "active" : ""} onClick={() => setView("sim")}><span>⌁</span>历史回放</button>
-          <button className={view === "learn" ? "active" : ""} onClick={() => setView("learn")}><span>◫</span>学习路径</button>
-          <button className={view === "quiz" ? "active" : ""} onClick={() => setView("quiz")}><span>◇</span>情景训练</button>
-        </nav>
-        <div className="journey">
-          <div className="journey-top"><span>当前等级</span><b>LV. 3</b></div>
-          <strong>单腿探索者</strong>
-          <div className="progress"><i /></div>
-          <small>620 / 1,000 XP</small>
-        </div>
-        <div className="sidebar-foot"><span className="avatar">Y</span><div><b>训练账户</b><small>连续学习 6 天</small></div><button aria-label="设置">•••</button></div>
-      </aside>
-
-      <section className="workspace">
-        <header className="topbar">
-          <div><span className="eyebrow">{view === "sim" ? "实战训练 · HISTORICAL REPLAY" : view === "learn" ? "系统课程 · LEARNING PATH" : "判断训练 · SCENARIO DRILLS"}</span><h1>{view === "sim" ? "SPX 0DTE 历史回放" : view === "learn" ? "从零建立期权思维" : "把知识变成临场判断"}</h1></div>
-          <div className="top-actions"><span className="streak">🔥 <b>6</b> 日连续</span><button className="ghost">学习手册</button></div>
-        </header>
-
-        {view === "sim" && <>
-          <section className="session-strip">
-            <div><span className="live-dot" /> <b>训练场景 03</b><small>历史样本 · 2024 年 7 月 15 日</small></div>
-            <div className="mission"><span>今日目标</span><b>识别上午趋势，使用有限风险策略完成 1 笔交易</b></div>
-            <div className="account"><span>账户净值</span><b>${(cash + position * Number(selectedRow.bid) * 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}</b><small className="positive">虚拟资金 · 风险自由</small></div>
-          </section>
-
-          <section className="terminal-grid">
-            <div className="chart-panel panel">
-              <div className="panel-head">
-                <div className="symbol"><b>SPX</b><span>S&P 500 INDEX</span></div>
-                <div className="quote"><b>{price.toFixed(2)}</b><span className="positive">+18.42&nbsp; +0.33%</span></div>
-                <div className="timeframes"><button>1m</button><button className="selected">5m</button><button>15m</button><button>1h</button></div>
-                <div className="data-tag">历史样本数据</div>
-              </div>
-              <div className="chart-area" aria-label="SPX 五分钟K线图">
-                <div className="price-axis"><span>5670</span><span>5660</span><span>5650</span><span>5640</span><span>5630</span></div>
-                <div className="grid-lines" />
-                <div className="candles">
-                  {chart.map((c, i) => {
-                    const y = 100 - ((Math.max(c.open, c.close) - 5628) / 44) * 100;
-                    const h = Math.max(4, (Math.abs(c.close - c.open) / 44) * 100);
-                    const wickY = 100 - ((c.high - 5628) / 44) * 100;
-                    const wickH = ((c.high - c.low) / 44) * 100;
-                    const up = c.close >= c.open;
-                    return <span key={i} className={`candle ${up ? "up" : "down"}`} style={{ left: `${(i / candles.length) * 100}%`, top: `${y}%`, height: `${h}%` }}><i style={{ top: `${wickY - y}%`, height: `${wickH}%` }} /></span>;
-                  })}
-                </div>
-                <div className="vwap">VWAP 5647.82</div>
-                <div className="chart-note"><b>观察</b><span>价格回踩 VWAP 后重新站稳。先判断结构，不急着下注。</span></div>
-                <div className="time-axis"><span>09:30</span><span>11:00</span><span>12:30</span><span>14:00</span><span>16:00</span></div>
-              </div>
-              <div className="playback">
-                <button className="round" onClick={() => setCursor(1)} aria-label="回到开盘">↶</button>
-                <button className="play" onClick={() => setPlaying((v) => !v)}>{playing ? "Ⅱ" : "▶"}</button>
-                <b>{simTime}:00 ET</b>
-                <input aria-label="回放进度" type="range" min="1" max={candles.length} value={cursor} onChange={(e) => setCursor(Number(e.target.value))} />
-                <div className="speed">{[1, 2, 4, 8].map((n) => <button key={n} className={speed === n ? "selected" : ""} onClick={() => setSpeed(n)}>{n}×</button>)}</div>
-              </div>
-            </div>
-
-            <div className="coach-panel panel">
-              <div className="coach-head"><div className="coach-icon">✦</div><div><b>AI 交易教练</b><span>实时观察你的决策过程</span></div><i>在线</i></div>
-              <div className="coach-body">
-                <span className="coach-time">{simTime} · 市场结构检查</span>
-                <h3>现在你看到了什么？</h3>
-                <p>SPX 开盘上冲后回踩。下单前，用三个证据验证你的方向。</p>
-                <ol><li><b>趋势</b><span>5 分钟高点与低点是否抬高？</span></li><li><b>位置</b><span>价格在 VWAP 哪一侧？</span></li><li><b>风险</b><span>这笔交易失效的位置在哪里？</span></li></ol>
-                <div className="hint"><span>提示</span>切换到 15 分钟图，避免把 5 分钟噪音误判成趋势。</div>
-                <textarea aria-label="记录判断" placeholder="写下你的判断… 例如：趋势偏多，因为…" />
-                <button className="outline">保存判断</button>
-              </div>
-            </div>
-          </section>
-
-          <section className="chain-panel panel">
-            <div className="chain-head"><div><b>期权链</b><span>SPX · 0DTE · 2024/07/15</span></div><div className="chain-summary"><span>现价 <b>{price.toFixed(2)}</b></span><span>预期波动 <b>±28.4</b></span><span>IV Rank <b>31</b></span></div><button className="strategy-button">策略构建器 <span>→</span></button></div>
-            <div className="chain-table">
-              <div className="tr th"><span>CALL BID</span><span>ASK</span><span>DELTA</span><b>行权价</b><span>IV</span><span>PUT MID</span></div>
-              {chain.map((row) => <button key={row.strike} className={`tr ${selected === row.strike ? "chosen" : ""}`} onClick={() => setSelected(row.strike)}><span>{row.bid}</span><span>{row.ask}</span><span>{row.delta}</span><b>{row.strike}</b><span>{row.iv}</span><span>{row.put}</span></button>)}
-            </div>
-            <div className="order-bar">
-              <div><span>已选合约</span><b>SPX {selected} Call</b></div><div><span>限价参考</span><b>${selectedRow.ask}</b></div><div><span>最大风险</span><b>${(Number(selectedRow.ask) * 100).toLocaleString()}</b></div>
-              <button className="buy" onClick={buy}>买入 1 张</button><button className="review-btn" onClick={() => setReview(true)}>结束并复盘</button>
-            </div>
-          </section>
-        </>}
-
-        {view === "learn" && <section className="learning-view">
-          <div className="learning-hero"><span className="eyebrow">你的 8 周路线</span><h2>先理解风险，再学习收益。</h2><p>每一章都由短教程、判断题和历史行情任务组成。不是背策略名称，而是学会什么时候用、什么时候不用。</p><div className="hero-stats"><div><b>32%</b><span>总进度</span></div><div><b>14</b><span>已掌握概念</span></div><div><b>7</b><span>完成训练</span></div></div></div>
-          <div className="module-list">{modules.map((m, i) => <button key={m[0]} className={i === 2 ? "current" : ""}><span className="module-num">{m[0]}</span><div><b>{m[1]}</b><small>{m[2]}</small></div><em>{m[3]}</em><span className="arrow">→</span></button>)}</div>
-          <aside className="next-lesson"><span className="eyebrow">下一课 · 8 分钟</span><h3>买入看涨期权，不只是“看涨”</h3><p>方向看对，为什么仍然可能亏钱？用三个价格路径理解 Delta、Theta 和隐波。</p><div className="mini-payoff"><i /><i /><i /><i /><i /><i /></div><button>继续学习 →</button></aside>
-        </section>}
-
-        {view === "quiz" && <section className="quiz-view">
-          <div className="quiz-card"><div className="quiz-progress"><span>情景 4 / 10</span><i><b /></i><span>难度：进阶</span></div><span className="eyebrow">0DTE · 开盘 45 分钟</span><h2>方向偏多，但你担心午前波动率回落。哪种表达更合理？</h2><p className="scenario">SPX 位于 VWAP 上方，5 分钟结构高低点抬高。IV 高于近 20 日中位数，你愿意承担最多 $500 风险。</p><div className="answers">{[["A","直接买入近平值 Call"],["B","构建看涨垂直价差"],["C","卖出裸 Put"],["D","买入宽跨式"]].map(([k, v]) => <button key={k} className={quizAnswer === k ? "picked" : ""} onClick={() => setQuizAnswer(k)}><b>{k}</b><span>{v}</span></button>)}</div>{quizAnswer && <div className={`feedback ${quizAnswer === "B" ? "correct" : ""}`}><b>{quizAnswer === "B" ? "判断正确" : "再想一步"}</b><p>{quizAnswer === "B" ? "看涨价差保留方向敞口，同时卖出的高行权价 Call 能部分抵消较高的隐波成本，并把最大亏损限定在净权利金。" : "你需要同时处理方向、隐波回落和最大风险三个条件。比较每个策略是否都满足。"}</p></div>}<button className="submit" disabled={!quizAnswer}>提交判断</button></div>
-          <aside className="concept-card"><span>本题考点</span><h3>策略不是观点，<br/>而是观点的风险容器。</h3><ul><li>方向：偏多</li><li>波动率：可能回落</li><li>风险：必须封顶</li></ul><button onClick={() => setView("learn")}>复习垂直价差 →</button></aside>
-        </section>}
-      </section>
-
-      {review && <div className="modal-backdrop" onClick={() => setReview(false)}><section className="review-modal" onClick={(e) => e.stopPropagation()}><button className="modal-close" onClick={() => setReview(false)}>×</button><span className="eyebrow">训练复盘 · 2024/07/15</span><h2>你的方向判断不错，入场依据还可以更完整。</h2><div className="score-ring"><b>78</b><span>/ 100</span></div><div className="review-grid"><div><span>做对了</span><b>等待价格重回 VWAP 上方</b><p>没有在第一次快速上冲时追价，避免了高波动区间的错误入场。</p></div><div><span>待改进</span><b>缺少 15 分钟级别确认</b><p>你的记录只引用了 5 分钟结构。更高周期仍处于上午区间内部。</p></div><div><span>风险纪律</span><b>单笔最大风险偏高</b><p>本次合约成本占账户 6.4%。下次优先用垂直价差将风险控制在 2% 内。</p></div></div><button className="submit" onClick={() => setReview(false)}>保存复盘并完成训练</button></section></div>}
-    </main>
-  );
+  const [frame, setFrame] = useState(5), [replayMinute, setReplayMinute] = useState(185), [speed, setSpeed] = useState(4), [playing, setPlaying] = useState(false);
+  const [tool, setTool] = useState<Tool>("cursor"), [selected, setSelected] = useState(5640), [position, setPosition] = useState(0);
+  const [initialCash, setInitialCash] = useState(25000), [cash, setCash] = useState(25000), [accountOpen, setAccountOpen] = useState(false), [draftCash, setDraftCash] = useState("25000");
+  const [lessonId, setLessonId] = useState<number | null>(null), [lessonSection, setLessonSection] = useState(0), [lessonChoice, setLessonChoice] = useState<number | null>(null), [completed, setCompleted] = useState<number[]>([1, 2]);
+  const [review, setReview] = useState(false), [savedNote, setSavedNote] = useState(false), [builderOpen, setBuilderOpen] = useState(false), [quizAnswer, setQuizAnswer] = useState<string | null>(null);
+  useEffect(() => { const saved = Number(localStorage.getItem("options-lab-balance")); if (saved >= 1000) { setInitialCash(saved); setCash(saved); setDraftCash(String(saved)); } }, []);
+  useEffect(() => { if (!playing) return; const t = window.setInterval(() => setReplayMinute(v => v >= 389 ? 0 : v + 1), Math.max(35, 700 / speed)); return () => clearInterval(t); }, [playing, speed]);
+  const price = minuteBars[replayMinute].close, row = chain.find(r => r.strike === selected)!;
+  const setAccount = () => { const n = Math.max(1000, Math.min(10_000_000, Number(draftCash) || 25000)); setInitialCash(n); setCash(n); setPosition(0); localStorage.setItem("options-lab-balance", String(n)); setAccountOpen(false); };
+  const buy = () => { const cost = Number(row.ask) * 100; if (cash >= cost) { setCash(v => v - cost); setPosition(v => v + 1); } };
+  const lesson = lessonId ? lessons.find(l => l.id === lessonId)! : null;
+  const nav = (v: "sim" | "learn" | "quiz") => { setView(v); setLessonId(null); };
+  return <main className="app-shell">
+    <aside className="sidebar"><div className="brand"><span className="brand-mark">Δ</span><span>期权研习社<small>OPTIONS LAB</small></span></div><nav aria-label="主导航"><button className={view === "sim" ? "active" : ""} onClick={() => nav("sim")}><span>⌁</span>历史回放</button><button className={view === "learn" ? "active" : ""} onClick={() => nav("learn")}><span>◫</span>学习路径</button><button className={view === "quiz" ? "active" : ""} onClick={() => nav("quiz")}><span>◇</span>情景训练</button></nav><div className="journey"><div className="journey-top"><span>当前等级</span><b>LV. 3</b></div><strong>单腿探索者</strong><div className="progress"><i /></div><small>620 / 1,000 XP</small></div><div className="sidebar-foot"><span className="avatar">Y</span><div><b>训练账户</b><small>连续学习 6 天</small></div><button aria-label="账户设置" onClick={() => setAccountOpen(true)}>•••</button></div></aside>
+    <section className="workspace"><header className="topbar"><div><span className="eyebrow">{view === "sim" ? "实战训练 · HISTORICAL REPLAY" : view === "learn" ? "系统课程 · LEARNING PATH" : "判断训练 · SCENARIO DRILLS"}</span><h1>{view === "sim" ? "SPX 0DTE 历史回放" : view === "learn" ? "从零建立期权思维" : "把知识变成临场判断"}</h1></div><div className="top-actions"><span className="streak">🔥 <b>6</b> 日连续</span><button className="ghost" onClick={() => nav("learn")}>学习手册</button><button className="account-chip" onClick={() => setAccountOpen(true)}><span>虚拟账户</span><b>${cash.toLocaleString()}</b><i>设置</i></button></div></header>
+      {view === "sim" && <><section className="session-strip"><div><span className="live-dot"/><b>训练场景 03</b><small>历史样本 · 2024 年 7 月 15 日</small></div><div className="mission"><span>今日目标</span><b>识别上午趋势，使用有限风险策略完成 1 笔交易</b></div><div className="account"><span>账户净值</span><b>${(cash + position * Number(row.bid) * 100).toLocaleString()}</b><small className="positive">初始资金 ${initialCash.toLocaleString()}</small></div></section>
+        <section className="terminal-grid"><div className="chart-panel panel"><TradingChart frame={frame} setFrame={setFrame} replayMinute={replayMinute} tool={tool} setTool={setTool}/><div className="playback pro-playback"><button className="round" onClick={() => setReplayMinute(0)}>↶</button><button className="play" onClick={() => setPlaying(v => !v)}>{playing ? "Ⅱ" : "▶"}</button><b>{formatTime(minuteBars[replayMinute].time)} ET</b><input aria-label="回放进度" type="range" min="0" max="389" value={replayMinute} onChange={e => setReplayMinute(Number(e.target.value))}/><div className="speed">{[1,2,4,8].map(n => <button key={n} className={speed === n ? "selected" : ""} onClick={() => setSpeed(n)}>{n}×</button>)}</div></div></div>
+          <div className="coach-panel panel"><div className="coach-head"><div className="coach-icon">✦</div><div><b>AI 交易教练</b><span>实时观察你的决策过程</span></div><i>在线</i></div><div className="coach-body"><span className="coach-time">{formatTime(minuteBars[replayMinute].time)} · 市场结构检查</span><h3>现在你看到了什么？</h3><p>先用画线工具标出开盘区间与趋势，再写下你的方向判断。</p><ol><li><b>趋势</b><span>5 分钟高点与低点是否抬高？</span></li><li><b>多周期</b><span>切到 15 分钟后，结论是否仍成立？</span></li><li><b>风险</b><span>失效位置和最大亏损是多少？</span></li></ol><div className="hint"><span>操作</span>点击左侧 ╱ 后在图表上拖动，即可画趋势线。</div><textarea aria-label="记录判断" placeholder="写下你的判断… 例如：5 分钟偏多，但 15 分钟仍处于区间…" onChange={() => setSavedNote(false)}/><button className="outline" onClick={() => setSavedNote(true)}>{savedNote ? "✓ 判断已保存" : "保存判断"}</button></div></div></section>
+        <section className="chain-panel panel"><div className="chain-head"><div><b>期权链</b><span>SPX · 0DTE · 2024/07/15</span></div><div className="chain-summary"><span>现价 <b>{price.toFixed(2)}</b></span><span>预期波动 <b>±28.4</b></span><span>IV Rank <b>31</b></span></div><button className="strategy-button" onClick={() => setBuilderOpen(true)}>策略构建器 <span>→</span></button></div><div className="chain-table"><div className="tr th"><span>CALL BID</span><span>ASK</span><span>DELTA</span><b>行权价</b><span>IV</span><span>PUT MID</span></div>{chain.map(r => <button key={r.strike} className={`tr ${selected === r.strike ? "chosen" : ""}`} onClick={() => setSelected(r.strike)}><span>{r.bid}</span><span>{r.ask}</span><span>{r.delta}</span><b>{r.strike}</b><span>{r.iv}</span><span>{r.put}</span></button>)}</div><div className="order-bar"><div><span>已选合约</span><b>SPX {selected} Call</b></div><div><span>限价参考</span><b>${row.ask}</b></div><div><span>最大风险</span><b>${(Number(row.ask)*100).toLocaleString()}</b></div><button className="buy" onClick={buy}>买入 1 张</button><button className="review-btn" onClick={() => setReview(true)}>结束并复盘</button></div></section></>}
+      {view === "learn" && !lesson && <section className="learning-view"><div className="learning-hero"><span className="eyebrow">你的 8 周路线</span><h2>先理解风险，再学习收益。</h2><p>每一章都包含可阅读教程、关键概念和检查题。完成基础章节后，再进入历史行情任务。</p><div className="hero-stats"><div><b>{Math.round(completed.length / lessons.length * 100)}%</b><span>总进度</span></div><div><b>{completed.length}</b><span>完成章节</span></div><div><b>7</b><span>实战训练</span></div></div></div><div className="module-list">{lessons.map(l => <button key={l.id} className={l.id === 3 ? "current" : ""} onClick={() => { setLessonId(l.id); setLessonSection(0); setLessonChoice(null); }}><span className="module-num">{l.unit}</span><div><b>{l.title}</b><small>{l.subtitle} · {l.duration}</small></div><em>{completed.includes(l.id) ? "已完成" : l.status}</em><span className="arrow">→</span></button>)}</div><aside className="next-lesson"><span className="eyebrow">下一课 · 22 分钟</span><h3>买入看涨期权，不只是“看涨”</h3><p>方向看对，为什么仍然可能亏钱？用价格路径理解 Delta、Theta 和隐波。</p><div className="mini-payoff"><i/><i/><i/><i/><i/><i/></div><button onClick={() => setLessonId(3)}>继续学习 →</button></aside></section>}
+      {view === "learn" && lesson && <section className="lesson-reader"><button className="back-link" onClick={() => setLessonId(null)}>← 返回学习路径</button><header><span className="eyebrow">第 {lesson.unit} 章 · {lesson.duration}</span><h2>{lesson.title}</h2><p>{lesson.intro}</p></header><div className="lesson-layout"><aside className="lesson-toc">{lesson.sections.map((s, i) => <button key={s.h} className={lessonSection === i ? "active" : ""} onClick={() => setLessonSection(i)}><span>{i + 1}</span>{s.h}</button>)}<button className={lessonSection === lesson.sections.length ? "active" : ""} onClick={() => setLessonSection(lesson.sections.length)}><span>✓</span>本章检查</button></aside><article className="lesson-content">{lessonSection < lesson.sections.length ? <><span className="lesson-count">{lessonSection + 1} / {lesson.sections.length}</span><h3>{lesson.sections[lessonSection].h}</h3><p>{lesson.sections[lessonSection].p}</p><div className="lesson-example"><b>交易前写下来</b><p>{lesson.id === 1 ? "我买的是一项权利，最多损失已付权利金；报价必须乘以合约乘数。" : lesson.id === 3 ? "方向证据：____　失效位置：____　最多亏损：____" : "这个策略的收益来源是：____　它最怕的市场变化是：____"}</p></div><div className="lesson-nav"><button disabled={lessonSection === 0} onClick={() => setLessonSection(v => v - 1)}>上一节</button><button onClick={() => setLessonSection(v => v + 1)}>下一节 →</button></div></> : <><span className="lesson-count">知识检查</span><h3>{lesson.question}</h3><div className="lesson-choices">{lesson.choices.map((c, i) => <button key={c} className={lessonChoice === i ? "picked" : ""} onClick={() => setLessonChoice(i)}><span>{String.fromCharCode(65+i)}</span>{c}</button>)}</div>{lessonChoice !== null && <div className={`lesson-result ${lessonChoice === lesson.answer ? "correct" : "wrong"}`}><b>{lessonChoice === lesson.answer ? "回答正确" : "还差一步"}</b><p>{lessonChoice === lesson.answer ? "你已经抓住了本章的核心风险逻辑。" : "回到本章内容，重新检查合约乘数、成本或最大风险。"}</p></div>}<button className="complete-lesson" disabled={lessonChoice !== lesson.answer} onClick={() => { setCompleted(xs => xs.includes(lesson.id) ? xs : [...xs, lesson.id]); setLessonId(null); }}>完成本章并返回</button></>}</article><aside className="lesson-notes"><span>本章目标</span><ul><li>能用自己的话解释概念</li><li>能识别适用情景</li><li>先写最大风险再谈收益</li></ul><button onClick={() => nav("sim")}>去历史回放练习 →</button></aside></div></section>}
+      {view === "quiz" && <section className="quiz-view"><div className="quiz-card"><div className="quiz-progress"><span>情景 4 / 10</span><i><b/></i><span>难度：进阶</span></div><span className="eyebrow">0DTE · 开盘 45 分钟</span><h2>方向偏多，但你担心午前波动率回落。哪种表达更合理？</h2><p className="scenario">SPX 位于 VWAP 上方，5 分钟结构高低点抬高。IV 高于近 20 日中位数，你愿意承担最多 $500 风险。</p><div className="answers">{[["A","直接买入近平值 Call"],["B","构建看涨垂直价差"],["C","卖出裸 Put"],["D","买入宽跨式"]].map(([k,v]) => <button key={k} className={quizAnswer === k ? "picked" : ""} onClick={() => setQuizAnswer(k)}><b>{k}</b><span>{v}</span></button>)}</div>{quizAnswer && <div className={`feedback ${quizAnswer === "B" ? "correct" : ""}`}><b>{quizAnswer === "B" ? "判断正确" : "再想一步"}</b><p>{quizAnswer === "B" ? "看涨价差保留方向敞口，同时抵消部分较高隐波成本，并把最大亏损限定在净权利金。" : "你需要同时处理方向、隐波回落和最大风险三个条件。"}</p></div>}</div><aside className="concept-card"><span>本题考点</span><h3>策略不是观点，<br/>而是观点的风险容器。</h3><ul><li>方向：偏多</li><li>波动率：可能回落</li><li>风险：必须封顶</li></ul><button onClick={() => { nav("learn"); setLessonId(4); }}>复习垂直价差 →</button></aside></section>}
+    </section>
+    {accountOpen && <div className="modal-backdrop" onClick={() => setAccountOpen(false)}><section className="account-modal" onClick={e => e.stopPropagation()}><button className="modal-close" onClick={() => setAccountOpen(false)}>×</button><span className="eyebrow">模拟账户设置</span><h2>调整训练资金</h2><p>调整会清空当前模拟仓位并重置可用现金。仅保存在当前设备。</p><label>初始资金（美元）<input type="number" min="1000" max="10000000" step="1000" value={draftCash} onChange={e => setDraftCash(e.target.value)}/></label><div className="preset-cash">{[10000,25000,100000,1000000].map(n => <button key={n} onClick={() => setDraftCash(String(n))}>${n.toLocaleString()}</button>)}</div><button className="submit" onClick={setAccount}>保存并重置账户</button></section></div>}
+    {review && <div className="modal-backdrop" onClick={() => setReview(false)}><section className="review-modal" onClick={e => e.stopPropagation()}><button className="modal-close" onClick={() => setReview(false)}>×</button><span className="eyebrow">训练复盘 · 2024/07/15</span><h2>方向判断不错，入场依据还可以更完整。</h2><div className="score-ring"><b>78</b><span>/ 100</span></div><div className="review-grid"><div><span>做对了</span><b>等待价格重回 VWAP 上方</b><p>没有在第一次快速上冲时追价，避免了高波动区间的错误入场。</p></div><div><span>待改进</span><b>缺少 15 分钟级别确认</b><p>记录主要引用 5 分钟结构。切换到 15 分钟后，仍处于上午区间内部。</p></div><div><span>风险纪律</span><b>单笔风险应控制</b><p>优先使用垂直价差，将最大亏损控制在账户的 2% 内。</p></div></div><button className="submit" onClick={() => setReview(false)}>保存复盘并完成训练</button></section></div>}
+    {builderOpen && <div className="modal-backdrop" onClick={() => setBuilderOpen(false)}><section className="strategy-modal" onClick={e => e.stopPropagation()}><button className="modal-close" onClick={() => setBuilderOpen(false)}>×</button><span className="eyebrow">策略构建器</span><h2>看涨垂直价差</h2><p>买入 {selected} Call，同时卖出 {selected + 10} Call。用收益上限换取更低成本与有限风险。</p><div className="legs"><div><b>＋1</b><span>买入 {selected} Call</span><em>${row.ask}</em></div><div><b>－1</b><span>卖出 {selected + 10} Call</span><em>$10.20</em></div></div><div className="risk-metrics"><div><span>预计净支出</span><b>$590</b></div><div><span>最大收益</span><b>$410</b></div><div><span>盈亏平衡</span><b>{selected + 5.9}</b></div></div><button className="submit" onClick={() => setBuilderOpen(false)}>加入模拟订单</button></section></div>}
+  </main>;
 }
