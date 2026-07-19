@@ -1,98 +1,96 @@
-# vinext-starter
+# Options Learning Lab
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Options Learning Lab is a bilingual, browser-based learning and paper-trading environment designed to help a beginner build practical options judgment before risking real capital.
 
-## Prerequisites
+**Live demo:** https://options-learning-lab.mauve-spoon-3156.chatgpt.site
 
-- Node.js `>=22.13.0`
+## What it does
 
-## Quick Start
+- Teaches options from first principles through structured lessons and knowledge checks.
+- Provides 11 freely accessible training scenarios instead of forcing a single linear path.
+- Replays full trading days with 1-, 5-, and 15-minute candlestick views and adjustable playback speed.
+- Includes drawing tools, VWAP, timeframe analysis, a modeled option chain, single-leg calls, and defined-risk vertical spreads.
+- Uses a configurable paper account with position sizing, daily loss limits, working limit orders, stops, targets, and forced end-of-day exits.
+- Produces evidence-based reviews that score planning, analysis, risk checks, and exit discipline separately from P/L.
+- Supports English and Chinese, with a first-visit language chooser and a persistent language switch.
+
+## Why it exists
+
+Most beginner options products teach vocabulary or provide a trading ticket, but leave a gap between knowing a strategy and making a defensible decision under time pressure. Options Learning Lab turns that gap into a repeatable practice loop:
+
+1. Learn the concept.
+2. Make a decision in a historical scenario.
+3. Record the thesis, invalidation, and risk.
+4. Execute in a paper account.
+5. Review the quality of the process rather than celebrating or punishing the outcome alone.
+
+## How Codex and GPT-5.6 were used
+
+This product was developed through an iterative Codex workflow, with GPT-5.6 used as the reasoning and implementation partner during the Build Week refinement cycle.
+
+Codex helped to:
+
+- turn a nontechnical product brief into a working interactive application;
+- challenge the first demo from both the learner and professional-coach perspectives;
+- design the curriculum, scenario taxonomy, risk controls, and evidence-based review model;
+- implement the React/vinext interface, replay engine, candlestick aggregation, modeled option chain, order lifecycle, and bilingual experience;
+- identify product risks such as false precision, look-ahead bias, unresolved positions, misleading performance scores, and locked learning paths;
+- source and integrate five recent SPY minute-bar replay days while clearly separating real underlying data from modeled historical option prices;
+- repeatedly build, validate, and deploy production versions while preserving the working product.
+
+Key decisions made with Codex included keeping all scenarios open, separating decision quality from P/L, preventing time travel after a trade decision, enforcing a written plan before orders, and labeling modeled option prices rather than presenting them as real fills.
+
+## Data and safety disclosure
+
+This is an educational simulator, not a brokerage or investment-advice service. Five SPY scenarios use historical one-minute underlying bars sourced during development; older SPX scenarios and all historical option-chain prices are teaching models. Modeled quotes do not represent guaranteed or actual executable prices.
+
+## Test the project
+
+1. Open the [live demo](https://options-learning-lab.mauve-spoon-3156.chatgpt.site).
+2. Choose English or Chinese.
+3. Select a starting experience level; this changes recommendations but does not lock content.
+4. Open any scenario from 01 through 11.
+5. Switch among the 1-, 5-, and 15-minute charts and add a chart annotation.
+6. Write a trade plan, inspect the option chain, and submit a paper limit order.
+7. Advance the replay, resolve all positions and orders, then open the evidence-based review.
+8. Visit Learning Path and Training Report to inspect the curriculum and saved process metrics.
+
+No account or test credentials are required. Preferences and training history are stored locally in the browser.
+
+## Local setup
+
+Prerequisite: Node.js 22.13 or newer.
 
 ```bash
 npm install
 npm run dev
+```
+
+For a production build:
+
+```bash
 npm run build
+npm run start
 ```
 
-This starter does not use `wrangler.jsonc`.
+## Technology
 
-## Included Shape
+- React 19
+- Next.js-compatible vinext runtime
+- TypeScript
+- Vite
+- Tailwind CSS
+- Cloudflare-compatible deployment through OpenAI Sites
+- Browser-local persistence for learning preferences and training records
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+## Repository map
 
-## Workspace Auth Headers
+- `app/page.tsx` — product experience, simulator, curriculum, orders, and reviews
+- `app/TradingChart.tsx` — candlestick rendering, aggregation, and chart interactions
+- `app/marketData.ts` — training scenario data
+- `app/i18n.ts` — English/Chinese translation layer
+- `app/globals.css` — responsive interface styling
 
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
+## Build Week track
 
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
-```
-
-## Optional Dispatch-Owned ChatGPT Sign-In
-
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
-
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+**Education** — the primary audience is a learner developing options decision-making and risk-management skills.
