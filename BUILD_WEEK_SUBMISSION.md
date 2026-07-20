@@ -24,21 +24,27 @@ The simulator tracks whether the learner checked a higher timeframe, left chart 
 
 The entire experience is available in English and Chinese. A first-visit language chooser defaults to English, and the persistent switch remains available throughout the product.
 
-### How we built it
+### How I built it
 
-The application uses React, TypeScript, vinext, Vite, and a Cloudflare-compatible deployment through OpenAI Sites. The replay engine aggregates minute bars into multiple timeframes, advances them at adjustable speed, and prevents rewinding after a decision to reduce look-ahead bias. The order model supports working limit orders, position sizing, stops, profit targets, timed exits, daily loss limits, and forced end-of-day cleanup.
+I built the application with React, TypeScript, vinext, Vite, and a Cloudflare-compatible deployment through OpenAI Sites. The replay engine aggregates minute bars into multiple timeframes, advances them at adjustable speed, and prevents rewinding after a decision to reduce look-ahead bias. The order model supports working limit orders, position sizing, stops, profit targets, timed exits, daily loss limits, and forced end-of-day cleanup.
 
-Codex and GPT-5.6 were used throughout the Build Week refinement cycle to translate the original product vision into code, critique the experience from learner and professional-coach perspectives, design safeguards, implement the simulator and bilingual interface, validate builds, and deploy production iterations. Important Codex-assisted decisions included opening every learning scenario, separating process quality from P/L, requiring written invalidation before order entry, blocking final reviews while risk remains unresolved, and clearly labeling modeled option quotes.
+I used Codex and GPT-5.6 throughout the Build Week refinement cycle to translate my original product vision into code, critique the experience from learner and professional-coach perspectives, design safeguards, implement the simulator and bilingual interface, validate builds, and deploy production iterations. Important Codex-assisted decisions I made included opening every learning scenario, separating process quality from P/L, requiring written invalidation before order entry, blocking final reviews while risk remains unresolved, and clearly labeling modeled option quotes.
 
-### Challenges
+### Challenges I ran into
 
-The hardest challenge was avoiding false realism. Recent underlying minute bars can make a simulator look authoritative even when historical option quotes are modeled. The product therefore labels data provenance, treats quotes as teaching estimates, and avoids implying that modeled fills were available in the real market.
+My hardest challenge was avoiding false realism. Recent underlying minute bars can make a simulator look authoritative even when historical option quotes are modeled. The product therefore labels data provenance, treats quotes as teaching estimates, and avoids implying that modeled fills were available in the real market.
 
-Another challenge was coaching without hindsight. The system records the evidence available when a decision is made, prevents backward time travel after decisions, and evaluates planning and discipline rather than simply rewarding profitable outcomes.
+Another challenge I faced was coaching without hindsight. The system records the evidence available when a decision is made, prevents backward time travel after decisions, and evaluates planning and discipline rather than simply rewarding profitable outcomes.
 
-### What we learned
+### Accomplishments I'm proud of
 
-The strongest learning product is not the one with the most strategies. It is the one that repeatedly asks the learner to connect a market thesis to a bounded-risk expression, define what would prove the thesis wrong, and review the decision without outcome bias.
+I turned a broad nontechnical product vision into a functioning bilingual simulator with a coherent curriculum, historical replay, multi-timeframe charts, modeled strategy construction, a realistic order lifecycle, configurable risk controls, and evidence-based review.
+
+The product is intentionally honest: recommendations do not become restrictions, profitability does not prove decision quality, and modeled option prices are not presented as historical truth.
+
+### What I learned
+
+I learned that the strongest learning product is not the one with the most strategies. It is the one that repeatedly asks the learner to connect a market thesis to a bounded-risk expression, define what would prove the thesis wrong, and review the decision without outcome bias.
 
 ### What's next
 
