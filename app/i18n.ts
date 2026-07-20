@@ -1,6 +1,7 @@
 export type Locale = "zh" | "en";
 
 const phrasePairs: Array<[string,string]> = [
+  ["期权研习社｜从零到实战","Options Learning Lab | From Zero to Practice"],
   ["通过系统课程、情景训练与历史行情回放，建立期权策略与风险管理能力。","Build options strategy and risk-management skills through guided lessons, scenario drills, and historical replay."],
   ["买入股票得到资产本身；买入期权得到的是在到期日前按约定价格交易标的资产的权利。买方支付权利金，卖方收取权利金并承担履约义务。","Buying stock gives you the asset itself. Buying an option gives you the right to transact the underlying at a specified price before expiration. The buyer pays premium; the seller receives it and assumes the obligation."],
   ["美股标准股票期权通常对应 100 股。报价 $2.40 意味着一张合约成本通常是 $240，而不是 $2.40。SPX 属于现金结算指数期权，结算方式不同。","A standard U.S. equity option usually represents 100 shares. A $2.40 quote therefore means about $240 per contract, not $2.40. SPX is a cash-settled index option with different settlement rules."],
@@ -70,12 +71,12 @@ const phrasePairs: Array<[string,string]> = [
   ["从合约语言、风险边界和引导训练开始","Start with contract language, risk boundaries, and guided practice"],["跳过已掌握概念，重点练策略选择与执行","Skip familiar concepts and focus on strategy selection and execution"],["从复杂结构、压力场景和复盘证据开始","Start with complex structures, stress scenarios, and review evidence"],
   ["当前等级","Current Level"],["期权初学者","Options Beginner"],["风险学习者","Risk Learner"],["策略探索者","Strategy Explorer"],["训练账户","Training Account"],["尚未开始学习","Not started"],["已记录","Recorded"],["个学习日","learning days"],["账户设置","Account Settings"],
   ["系统课程","COURSE"],["实战训练","PRACTICE"],["判断训练","DECISION DRILLS"],["能力追踪","PERFORMANCE"],["学习日","Learning Days"],["继续学习","Continue Learning"],["从第 1 章开始","Start Chapter 1"],
-  ["多周期确认","Multi-timeframe confirmation"],["已查看 15 分钟结构","15-minute structure reviewed"],["尚未查看 15 分钟结构","15-minute structure not reviewed"],["交易计划","Trade plan"],["判断与失效条件已记录","Thesis and invalidation recorded"],["至少填写 20 个字","Write at least 20 characters"],["风险预算","Risk budget"],["单笔","Per trade"],["当日亏损","Daily loss"],["提醒","Reminder"],["计划已锁定","Plan locked"],["锁定交易计划","Lock trade plan"],["还需","Need"],["字","chars"],
+  ["多周期确认","Multi-timeframe confirmation"],["已查看 15 分钟结构","15-minute structure reviewed"],["尚未查看 15 分钟结构","15-minute structure not reviewed"],["交易计划","Trade plan"],["判断与失效条件已记录","Thesis and invalidation recorded"],["至少填写 20 个字","Write at least 20 characters"],["风险预算","Risk budget"],["单笔","Per trade"],["当日亏损","Daily loss"],["提醒","Reminder"],["计划已锁定","Plan locked"],["锁定交易计划","Lock trade plan"],["还需","Need"],
   ["K线周期","Candle timeframe"],["画线工具","Drawing tools"],["历史样本","Historical sample"],["新训练","New Session"],["已收盘","Closed"],["时间防穿越已开启：有交易决策后只能向前回放。","Anti-lookahead lock is on: after a trade decision, replay can only move forward."],
   ["教学期权链","Teaching Option Chain"],["个行权价","strikes"],["双边","both sides"],["与模拟流动性","and simulated liquidity"],["期权链数据源","Option-chain data source"],["训练模型","Training Model"],["数据说明","Data Notes"],["现价","Spot"],["剩余","Remaining"],["分钟","min"],["策略构建器","Strategy Builder"],
   ["可采用","Can use"],["合约目录、当前链、非插值历史成交","contract directory, current chain, and non-interpolated historical trades"],["模型补齐","Model fills"],["历史 Bid/Ask、Greeks 与无成交时段","historical bid/ask, Greeks, and no-trade intervals"],["明确拒绝","Never use"],["把插值价格标成真实成交","labeling interpolated prices as real trades"],["返回训练链","Back to Training Chain"],
   ["单笔风险符合规则","Per-trade risk is within the rule"],["单笔风险超过规则","Per-trade risk exceeds the rule"],["组合已占用","Portfolio risk used"],["挂单冻结","Orders reserved"],["净值回撤","Equity drawdown"],["当日上限","Daily limit"],
-  ["已选合约","Selected Contract"],["模型 Bid / Ask","Model Bid / Ask"],["可用购买力","Available Buying Power"],["单腿订单","Single-leg Order"],["选择不交易","Choose No Trade"],["结束并复盘","Finish & Review"],["待成交订单","Working Orders"],["回放推进时检查 Ask / 组合 Debit","Checks ask / combo debit as replay advances"],["等待","Working"],["买入开仓","Buy to Open"],["张","contract(s)"],["限价","Limit"],["提交于","Submitted"],["撤单并释放资金","Cancel & Release Funds"],["当前持仓","Open Positions"],["按可成交侧估值，包含买卖价差","Marked to executable side, including spread"],["成本","Cost"],["平仓价","Close Price"],["限价平仓","Limit Close"],["组合平仓","Close Combo"],
+  ["已选合约","Selected Contract"],["模型 Bid / Ask","Model Bid / Ask"],["可用购买力","Available Buying Power"],["单腿订单","Single-leg Order"],["选择不交易","Choose No Trade"],["结束并复盘","Finish & Review"],["待成交订单","Working Orders"],["回放推进时检查 Ask / 组合 Debit","Checks ask / combo debit as replay advances"],["等待","Working"],["买入开仓","Buy to Open"],[" 张"," contract(s)"],["限价","Limit"],["提交于","Submitted"],["撤单并释放资金","Cancel & Release Funds"],["当前持仓","Open Positions"],["按可成交侧估值，包含买卖价差","Marked to executable side, including spread"],["成本","Cost"],["平仓价","Close Price"],["限价平仓","Limit Close"],["组合平仓","Close Combo"],
   ["你的 8 周路线","Your 8-Week Path"],["个性化学习路线","Personalized Learning Path"],["全部课程开放","All Lessons Open"],["总进度","Overall Progress"],["完成章节","Completed Chapters"],["建议起点","Suggested Start"],["重新设置我的基础","Reset My Level"],["已完成","Completed"],["建议先学","Suggested first"],["可直接开始","Open Now"],["下一课","Next Lesson"],["进入推荐课程","Open Recommended Lesson"],["所有章节均可自由选择","Every chapter is freely accessible"],
   ["返回学习路径","Back to Learning Path"],["第","Chapter"],["章",""],["本章检查","Knowledge Check"],["本章目标","Chapter Goals"],["能用自己的话解释概念","Explain the concept in your own words"],["能识别适用情景","Identify appropriate scenarios"],["先写最大风险再谈收益","Write maximum risk before discussing reward"],["去历史回放练习","Practice in Historical Replay"],["交易前写下来","Write Before Trading"],["上一节","Previous"],["下一节","Next"],["知识检查","Knowledge Check"],["回答正确","Correct"],["还差一步","Try Again"],["你已经抓住了本章的核心风险逻辑。","You captured the chapter's core risk logic."],["回到本章内容，重新检查合约乘数、成本或最大风险。","Review the chapter and recheck multiplier, cost, or maximum risk."],["完成本章并返回","Complete Chapter & Return"],
   ["某 Call 报价 $3.20，标准乘数为 100。买入 1 张至少需要多少权利金？","A call is quoted at $3.20 with a 100 multiplier. What premium is required for one contract?"],["标的上涨，但你买的 Call 仍亏损，最合理的可能原因是？","The underlying rises but your call loses money. What is the most likely reason?"],["0DTE 买入 Call 前，哪个问题最重要？","What matters most before buying a 0DTE call?"],["5 点宽价差净支出 $1.80，单张最大理论收益是多少？","A 5-point-wide spread costs $1.80. What is maximum theoretical profit per spread?"],["哪种观点更适合考虑铁鹰式？","Which view best fits an iron condor?"],["当期权买卖价差很宽时，最合理的做法是？","What is the most reasonable action when an option bid-ask spread is wide?"],
@@ -90,9 +91,37 @@ const phrasePairs: Array<[string,string]> = [
   ["方向证据","Directional evidence"],["失效位置","Invalidation"],["最多亏损","Maximum loss"],["这个策略的收益来源是","This strategy earns from"],["它最怕的市场变化是","Its greatest market risk is"],["我买的是一项权利，最多损失已付权利金；报价必须乘以合约乘数。","I am buying a right; maximum loss is the premium paid, and the quote must be multiplied by the contract multiplier."],
   ["完成上一章解锁","Complete prior chapter to unlock"],["从这里开始","Start Here"],["未开始","Not Started"],["顺序","Sequence"],["掌握度解锁","Mastery Unlock"],["总进度","Overall Progress"],
   ["场景","Scenario"],["训练日","training day"],["选择训练场景","Select training scenario"],["设置","Settings"],["在线","Online"],["完成","Complete"],["进行中","In Progress"],["待解锁","Locked"],["正确","Correct"],["错误","Incorrect"],["返回","Back"],["关闭","Close"],
+  ["未实现","Unrealized"],["已实现","Realized"],["路线"," Track"],["AI 交易教练","AI Trading Coach"],["记录并审查你的实际行为","Records and reviews your actual decisions"],["证据","Evidence"],[" 条"," item(s)"],
+  ["查看 15 分钟周期","Reviewed the 15-minute timeframe"],["查看 5 分钟周期","Reviewed the 5-minute timeframe"],["查看 1 分钟周期","Reviewed the 1-minute timeframe"],["查看","Reviewed"],["周期","timeframe"],["标记水平关键位","Marked a horizontal key level"],["绘制趋势线","Drew a trend line"],["绘制价格区间","Marked a price range"],["撤销最近一次画线","Undid the latest chart annotation"],["清除全部画线","Cleared all chart annotations"],
+  ["保存完整交易计划与失效条件","Saved a complete trade plan and invalidation rule"],["已有交易决策后不能回到过去。请开始新训练，以避免未来数据污染。","Replay cannot move backward after a trading decision. Start a new session to prevent look-ahead bias."],
+  ["训练日结束","Training day complete"],["按 16:00 教学估值完成清算","positions settled at the 16:00 teaching valuation"],["撤销","Canceled"],["张未成交订单","working order(s)"],["本次训练已经结束，请开始新训练。","This session is complete. Start a new session."],["交易已被纪律系统暂停","Trading is paused by the discipline system"],["净值回撤达到上限或连续亏损 3 次","equity drawdown reached the limit or three consecutive losses occurred"],
+  ["检查","Risk check"],["最大风险","maximum risk"],["风险超限","Risk limit exceeded"],["可用购买力不足","Insufficient buying power"],["已有挂单冻结","working orders already reserve"],["组合风险超限","Portfolio risk limit exceeded"],["持仓与挂单最大风险合计将达到","combined maximum risk for positions and orders would reach"],
+  ["提交","Submitted"],["看涨价差限价单","bull call spread limit order"],["限价单成交","limit order filled at"],["看涨价差组合成交","bull call spread filled at"],["组合成交","combo fill"],["冻结购买力","reserved buying power"],["止损","stop"],["止盈","target"],["退出","exit"],["自动止损","Automatic stop"],["自动止盈","Automatic target"],["时间退出","Timed exit"],["主动平仓","Manual close"],["收盘强制平仓","market-close exit"],["盈亏","P/L"],[" 组"," spread(s)"],["价差","spread"],["单腿","single-leg"],
+  ["主动选择不交易：当前没有满足条件的优势","Chose no trade: current conditions do not offer a sufficient edge"],["已有持仓或挂单时不能选择不交易。","No-trade cannot be selected while positions or working orders remain."],["请先平仓或撤销全部挂单；未解决风险不能生成最终复盘。","Close all positions or cancel all orders first; unresolved risk blocks the final review."],["仍有未解决风险，不能保存最终复盘。","Unresolved risk remains, so the final review cannot be saved."],
+  ["训练日已结束","Training Day Complete"],["纪律熔断已触发","Discipline Lock Triggered"],["市场已收盘，订单已清算。","The market is closed and orders have been settled."],["连续亏损达到 3 次","Three consecutive losses reached"],["账户净值回撤达到当日上限","Account drawdown reached the daily limit"],["请结束并复盘","Finish the session and review"],
+  ["真实分钟成交","real minute trades"],["成交量","volume"],["持仓量","open interest"],["插值隐藏","Interpolated data hidden"],["真实当前","Live actual data"],["历史成交","Historical trades"],["合约","contract"],["交易日","trading day"],[" 点"," points"],
+  ["先把一张期权合约拆开，理解你究竟买了什么。","Break down one option contract and understand exactly what you are buying."],["方向看对仍可能亏损，因为期权价格不只由方向决定。","A correct directional call can still lose because direction is not the only driver of option value."],["用最简单的结构学会表达方向，同时尊重时间和波动率。","Use the simplest structures to express direction while respecting time and volatility."],["用一买一卖降低成本，让风险和目标都变得清楚。","Use one long and one short leg to reduce cost and clarify risk and reward."],["当你的观点不是单纯涨跌，而是价格可能落在某个区域。","Use range structures when your thesis concerns where price may finish, not only up or down."],["把图表结构、期权链和仓位风险放进同一个决策流程。","Combine chart structure, the option chain, and position risk in one decision process."],["无限","Unlimited"],
+  ["标记价格区间","Marked a price range"],["十字光标","Crosshair"],["趋势线","Trend line"],["水平线","Horizontal line"],["矩形","Rectangle"],["撤销上一条","Undo last annotation"],["清除全部","Clear all annotations"],["清空当前决策并开始新训练","Clear current decisions and start a new session"],["回放进度；提交决策后不能回退","Replay progress; rewinding is disabled after a decision"],["记录判断","Record your decision"],["主导航","Main navigation"],["路径：","Track: "],["· 修改","· Change"],
+  ["请先写出至少 20 字的交易逻辑、失效条件与退出计划。","Write at least 20 characters covering the thesis, invalidation, and exit plan."],["按限价计算占账户","At the limit price, this uses"],["规则上限为","while the account rule allows"],["限价单","limit order"],["成交","filled"],["平仓","close"],["关键位","key level"],["区间","range"],["绘制","draw"],
+  ["ROBINHOOD HYBRID · 已完成历史合约实测","ROBINHOOD HYBRID · Historical contract testing complete"],["K线来自 Robinhood 真实分钟成交；期权 Bid/Ask、Greeks、Volume/OI 仍为教学模型。","candles use real Robinhood minute trades; option bid/ask, Greeks, volume, and open interest remain teaching models."],["K线、期权价格与 Greeks 均为教学估值；Volume/OI 为模拟流动性指标。","Candles, option prices, and Greeks are teaching estimates; volume and open interest are simulated liquidity indicators."],["“真实K线”表示标的分钟成交来自 Robinhood；历史期权链仍为教学模型，不代表真实可成交价格。","“Real Candles” means underlying minute trades come from Robinhood. The historical option chain remains a teaching model, not an executable market."],["待成交订单 · 冻结","Working Orders · Reserved"],["持仓和挂单已清零；当日风险上限","Positions and working orders are cleared; daily risk limit"],
+  ["情景 4 / 10","Scenario 4 / 10"],["难度：进阶","Difficulty: Advanced"],["0DTE · 开盘 45 分钟","0DTE · 45 Minutes After the Open"],["策略不是观点，","A strategy is not the thesis;"],["而是观点的风险容器。","it is the thesis's risk container."],["方向：偏多","Direction: Bullish"],["波动率：可能回落","Volatility: May Contract"],["风险：必须封顶","Risk: Must Be Capped"],["复习垂直价差","Review Vertical Spreads"],["次最低观察样本","minimum observation samples"],["次成交","fill(s)"],["次","session(s)"],
+  ["训练日结束：","Training day complete: "],["方向证据：","Directional evidence: "],["失效位置：","Invalidation: "],["最多亏损：","Maximum loss: "],["这个策略的收益来源是：","This strategy earns from: "],["它最怕的市场变化是：","Its greatest market risk is: "],
+  ["看涨价差","bull call spread"],["看跌价差","bear put spread"],[" Call，同时卖出"," call and sell"],[" Call。"," call."],[" 分"," points"],
+  [" 的 "," "],
 ];
 
 const orderedPairs=[...phrasePairs].sort((a,b)=>b[0].length-a[0].length);
+
+const chinesePairs: Array<[string,string]> = [
+  ["OPTIONS LAB","期权学习实验室"],["HISTORICAL REPLAY","历史回放"],["LEARNING PATH","学习路径"],["SCENARIO DRILLS","情景训练"],["PERFORMANCE REVIEW","能力复盘"],
+  ["ROBINHOOD HYBRID","Robinhood 混合数据"],["CALL BID","看涨买价"],["PUT Δ","看跌德尔塔"],["Θ/DAY","每日西塔"],["VOL / OI","成交量 / 未平仓量"],["Model Bid / Ask","模型买价 / 卖价"],
+  ["Bid / Ask","买价 / 卖价"],["Bid/Ask","买价 / 卖价"],["Greeks","希腊值"],["Volume/OI","成交量 / 未平仓量"],["Volume","成交量"],["Delta","德尔塔"],["Gamma","伽马"],["Theta","西塔"],["Vega","维加"],
+  ["CALL","看涨"],["STRIKE","行权价"],["VEGA","维加"],["ASK","卖价"],["BID","买价"],["IV","隐含波动率"],["Call","看涨期权"],["Put","看跌期权"],["Ask","卖价"],["Bid","买价"],["Debit","净支出"],
+  ["AI 交易教练","智能交易教练"],["0DTE","当日到期"],["P/L","盈亏"],["Complete Beginner","纯新手"],["Intermediate","基础"],["Advanced","进阶"],["Beginner","入门"],
+  ["contract(s)","张合约"],["contract","合约"],["min","分钟"],["training day","训练日"],["Day风险","当日风险"],["Trade plan","交易计划"],["Invalidation","失效条件"],["Maximum risk","最大风险"],["Stop","止损"],["Target","止盈"],["Limit","限价"],["Complete","完成"],
+  ["Buy to Open","买入开仓"],["Buy","买入"],["Sell","卖出"],["Call /","看涨期权 /"],["Put /","看跌期权 /"],
+];
+const orderedChinesePairs=[...chinesePairs].sort((a,b)=>b[0].length-a[0].length);
 
 export function translateText(value:string):string{
   const leading=value.match(/^\s*/)?.[0]??"",trailing=value.match(/\s*$/)?.[0]??"";
@@ -100,4 +129,15 @@ export function translateText(value:string):string{
   for(const [zh,en] of orderedPairs) result=result.split(zh).join(en);
   result=result.replace(/（/g," (").replace(/）/g,") ").replace(/：/g,": ").replace(/，/g,", ").replace(/。/g,". ").replace(/；/g,"; ").replace(/、/g,", ");
   return leading+result.replace(/\s+([,.;:])/g,"$1").replace(/\s{2,}/g," ").trim()+trailing;
+}
+
+export function chineseText(value:string):string{
+  const leading=value.match(/^\s*/)?.[0]??"",trailing=value.match(/\s*$/)?.[0]??"";
+  let result=value;
+  for(const [en,zh] of orderedChinesePairs) result=result.split(en).join(zh);
+  return leading+result.replace(/\s{2,}/g," ").trim()+trailing;
+}
+
+export function localizeText(value:string,locale:Locale):string{
+  return locale==="en"?translateText(value):chineseText(value);
 }
